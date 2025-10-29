@@ -1,0 +1,12 @@
+{
+  "name": "Spring Boot Demo - Static Development",
+  "version": "1.0.0",
+  "description": "Frontend development setup",
+  "scripts": {
+    "dev": "live-server src/main/resources/static --port=3001 --proxy=http://localhost:8080/api",
+    "start": "npm run dev"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
