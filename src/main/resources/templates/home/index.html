@@ -317,7 +317,7 @@
                 <span>🚪</span>
                 <span>Logout</span>
             </a>
-            <a href="/admin"  class="btn btn-primary">
+            <a href="/admin"  class="btn btn-secondary admin-btn" th:classappend="${isAdmin} ? ' is-admin' : ''">
                 <span>👑</span>
                 <span>Admin Panel</span>
             </a>

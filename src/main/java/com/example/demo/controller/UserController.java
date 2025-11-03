@@ -1,5 +1,7 @@
-package com.example.demo;
+package com.example.demo.controller;
 
+import com.example.demo.model.User;
+import com.example.demo.service.UserService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -13,7 +15,8 @@ import jakarta.servlet.http.HttpSession;
 public class UserController {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
+
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
         "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$",
         Pattern.CASE_INSENSITIVE
@@ -28,10 +31,10 @@ public class UserController {
                 return ResponseEntity.badRequest().body("Invalid email format");
             if (user.getPassword().length() < 6)
                 return ResponseEntity.badRequest().body("Password must be at least 6 characters");
-            if (userRepository.findByEmail(user.getEmail()).isPresent())
+            if (userService.getUserByEmail(user.getEmail()).isPresent())
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists");
             user.setAdmin(false);
-            userRepository.save(user);
+            userService.saveUser(user);
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -47,7 +50,7 @@ public class UserController {
 
             if (email == null || password == null)
                 return ResponseEntity.badRequest().body("Missing email or password");
-            Optional<User> userOpt = userRepository.findByEmail(email);
+            Optional<User> userOpt = userService.getUserByEmail(email);
             if (userOpt.isEmpty())
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
             User user = userOpt.get();
@@ -80,12 +83,12 @@ public class UserController {
             return ResponseEntity.badRequest().body("Missing password fields");
         if (newPassword.length() < 6)
             return ResponseEntity.badRequest().body("New password must be at least 6 characters");
-        return userRepository.findById(id)
+        return userService.getUserById(id)
             .map(user -> {
                 if (!oldPassword.equals(user.getPassword()))
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Current password is incorrect");
                 user.setPassword(newPassword);
-                userRepository.save(user);
+                userService.saveUser(user);
                 return ResponseEntity.ok("Password updated successfully!");
             })
             .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
@@ -93,16 +96,16 @@ public class UserController {
 
     @GetMapping
     public List<User> getUsers() {
-        return userRepository.findAll();
+        return userService.getAllUsers();
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable int id, @RequestBody User updatedUser) {
-        return userRepository.findById(id)
+        return userService.getUserById(id)
             .map(user -> {
                 user.setName(updatedUser.getName());
                 user.setEmail(updatedUser.getEmail());
-                userRepository.save(user);
+                userService.saveUser(user);
                 return ResponseEntity.ok("User updated!");
             })
             .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
@@ -110,18 +113,18 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable int id) {
-        if (!userRepository.existsById(id))
+        if (!userService.getUserById(id).isPresent())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        userRepository.deleteById(id);
+        userService.deleteUser(id);
         return ResponseEntity.ok("User deleted!");
     }
 
     @PatchMapping("/{id}/admin")
     public ResponseEntity<?> updateAdminStatus(@PathVariable int id, @RequestBody Map<String, Boolean> body) {
-        return userRepository.findById(id)
+        return userService.getUserById(id)
             .map(user -> {
                 user.setAdmin(body.getOrDefault("isAdmin", false));
-                userRepository.save(user);
+                userService.saveUser(user);
                 return ResponseEntity.ok("Admin status updated!");
             })
             .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
