@@ -341,21 +341,21 @@
                     <h3>User Management</h3>
                     <p>View, add, edit, and manage all users and their permissions</p>
                 </a>
-                <div class="feature-card" onclick="window.location.href='/admin'" style="cursor: pointer;">
-                    <div class="feature-icon">⚙️</div>
-                    <h3>Admin Panel</h3>
-                    <p>Access the full administrative control panel</p>
+                <div class="feature-card" onclick="showDatabaseStats()" style="cursor: pointer;">
+                    <div class="feature-icon">💾</div>
+                    <h3>Database Stats</h3>
+                    <p>View database connection status and table information</p>
                 </div>
                 <div class="feature-card" onclick="refreshStats()" style="cursor: pointer;">
                     <div class="feature-icon">📈</div>
                     <h3>Refresh Stats</h3>
                     <p>Update dashboard statistics and data in real-time</p>
                 </div>
-                <div class="feature-card" onclick="showSystemInfo()" style="cursor: pointer;">
+                <a href="/systeminfo" class="feature-card" style="text-decoration: none; cursor: pointer;">
                     <div class="feature-icon">📊</div>
                     <h3>System Info</h3>
-                    <p>View system status and application information</p>
-                </div>
+                    <p>View detailed system status and application information</p>
+                </a>
             </div>
         </div>
         
@@ -527,15 +527,99 @@
             loadRecentActivity();
         }
 
-        // Show system info
-        function showSystemInfo() {
-            const info = `
-                Application: Spring Boot User Management
-                Version: 1.0.0
-                Status: Running
-                Last Updated: ${new Date().toLocaleString()}
-            `;
-            alert(info);
+        // Show database stats
+        async function showDatabaseStats() {
+            try {
+                const response = await fetch('/users');
+                const users = await response.json();
+                
+                const dbInfo = {
+                    'Database Type': 'MySQL',
+                    'Connection Status': '🟢 Connected',
+                    'Total Records': users.length,
+                    'Tables': 'users, tokens',
+                    'Last Query': new Date().toLocaleString()
+                };
+                
+                const message = Object.entries(dbInfo)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join('\n');
+                
+                // Create custom modal
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.3s ease-out;
+                `;
+                
+                modal.innerHTML = `
+                    <div style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 40px;
+                        border-radius: 20px;
+                        max-width: 500px;
+                        width: 90%;
+                        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+                        position: relative;
+                    ">
+                        <h2 style="color: white; margin: 0 0 25px 0; font-size: 2em; text-align: center;">
+                            💾 Database Statistics
+                        </h2>
+                        <div style="background: rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 25px;">
+                            ${Object.entries(dbInfo).map(([key, value]) => `
+                                <div style="
+                                    background: rgba(255, 255, 255, 0.08);
+                                    border-radius: 10px;
+                                    padding: 15px 20px;
+                                    margin: 12px 0;
+                                    border-left: 4px solid #a8d8f0;
+                                ">
+                                    <div style="color: #a8d8f0; font-weight: bold; font-size: 0.9em; margin-bottom: 8px; text-transform: uppercase;">
+                                        ${key}
+                                    </div>
+                                    <div style="color: white; font-size: 1.1em; font-family: 'Courier New', monospace;">
+                                        ${value}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="this.parentElement.parentElement.remove()" style="
+                            width: 100%;
+                            margin-top: 25px;
+                            padding: 15px;
+                            background: rgba(255, 255, 255, 0.2);
+                            border: 2px solid rgba(255, 255, 255, 0.3);
+                            color: white;
+                            font-weight: bold;
+                            font-size: 1.1em;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" 
+                           onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                            ✓ Close
+                        </button>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                modal.onclick = (e) => {
+                    if (e.target === modal) modal.remove();
+                };
+                
+            } catch (error) {
+                console.error('Error loading database stats:', error);
+                showMessage('Failed to load database statistics', 'error');
+            }
         }
 
         // Show message to user

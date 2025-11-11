@@ -34,6 +34,11 @@ public class HomeController {
         return "user_management/settings.html";
     }
     
+    @GetMapping("/systeminfo")
+    public String systemInfo() {
+        return "user_management/systeminfo.html";
+    }
+    
     @GetMapping("/error/403")
     public String forbidden() {
         return "error/403.html";

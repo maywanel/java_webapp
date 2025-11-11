@@ -1,7 +1,8 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.User;
-import com.example.demo.service.UserService;
+import com.example.demo.repository.UserRepository;
+import com.example.demo.service.TokenService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -9,13 +10,19 @@ import java.util.regex.*;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.bind.annotation.CookieValue;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
     @Autowired
-    private UserService userService;
+    private UserRepository userRepository;
+
+    @Autowired
+    private TokenService tokenService;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
         "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$",
@@ -31,34 +38,43 @@ public class UserController {
                 return ResponseEntity.badRequest().body("Invalid email format");
             if (user.getPassword().length() < 6)
                 return ResponseEntity.badRequest().body("Password must be at least 6 characters");
-            if (userService.getUserByEmail(user.getEmail()).isPresent())
+            if (userRepository.findByEmail(user.getEmail()).isPresent())
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists");
             user.setAdmin(false);
-            userService.saveUser(user);
+            userRepository.save(user);
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("An error occurred during signup: " + e.getMessage());
         }
     }
-    
+
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> credentials, HttpSession session) {
+    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> credentials, HttpSession session, HttpServletResponse response) {
         try {
             String email = credentials.get("email");
             String password = credentials.get("password");
 
             if (email == null || password == null)
                 return ResponseEntity.badRequest().body("Missing email or password");
-            Optional<User> userOpt = userService.getUserByEmail(email);
+            Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty())
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
             User user = userOpt.get();
             if (!password.equals(user.getPassword()))
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+
             session.setAttribute("currentUser", user);
             session.setAttribute("isAdmin", user.isAdmin());
-            session.setAttribute("userId", user.getId());
+            session.setAttribute("userId", user.getId());            
+            String token = tokenService.createToken(7);
+            Cookie cookie = new Cookie("token", token);
+            cookie.setMaxAge(7 * 24 * 60 * 60);
+            cookie.setPath("/");
+            cookie.setSecure(false);
+            cookie.setHttpOnly(true);
+            response.addCookie(cookie);
+            
             return ResponseEntity.ok()
                 .header("Content-Type", "application/json")
                 .body(user);
@@ -67,13 +83,20 @@ public class UserController {
                 .body("An error occurred during login: " + e.getMessage());
         }
     }
-    
+
     @PostMapping("/logout")
-    public ResponseEntity<?> logoutUser(HttpSession session) {
-        session.invalidate();
+    public ResponseEntity<?> logoutUser(HttpSession session, @CookieValue(value = "token", required = false) String token, HttpServletResponse response) {
+        session.invalidate();        
+        if (token != null) {
+            tokenService.invalidateToken(token);
+            Cookie cookie = new Cookie("token", "");
+            cookie.setMaxAge(0);
+            cookie.setPath("/");
+            response.addCookie(cookie);
+        }
         return ResponseEntity.ok("Logged out successfully");
     }
-    
+
     @PutMapping("/{id}/password")
     public ResponseEntity<?> updatePassword(@PathVariable int id, @RequestBody Map<String, String> passwordData) {
         String oldPassword = passwordData.get("oldPassword");
@@ -83,12 +106,12 @@ public class UserController {
             return ResponseEntity.badRequest().body("Missing password fields");
         if (newPassword.length() < 6)
             return ResponseEntity.badRequest().body("New password must be at least 6 characters");
-        return userService.getUserById(id)
+        return userRepository.findById(id)
             .map(user -> {
                 if (!oldPassword.equals(user.getPassword()))
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Current password is incorrect");
                 user.setPassword(newPassword);
-                userService.saveUser(user);
+                userRepository.save(user);
                 return ResponseEntity.ok("Password updated successfully!");
             })
             .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
@@ -96,16 +119,16 @@ public class UserController {
 
     @GetMapping
     public List<User> getUsers() {
-        return userService.getAllUsers();
+        return userRepository.findAll();
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable int id, @RequestBody User updatedUser) {
-        return userService.getUserById(id)
+        return userRepository.findById(id)
             .map(user -> {
                 user.setName(updatedUser.getName());
                 user.setEmail(updatedUser.getEmail());
-                userService.saveUser(user);
+                userRepository.save(user);
                 return ResponseEntity.ok("User updated!");
             })
             .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
@@ -113,18 +136,18 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable int id) {
-        if (!userService.getUserById(id).isPresent())
+        if (!userRepository.findById(id).isPresent())
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        userService.deleteUser(id);
+        userRepository.deleteById(id);
         return ResponseEntity.ok("User deleted!");
     }
 
     @PatchMapping("/{id}/admin")
     public ResponseEntity<?> updateAdminStatus(@PathVariable int id, @RequestBody Map<String, Boolean> body) {
-        return userService.getUserById(id)
+        return userRepository.findById(id)
             .map(user -> {
                 user.setAdmin(body.getOrDefault("isAdmin", false));
-                userService.saveUser(user);
+                userRepository.save(user);
                 return ResponseEntity.ok("Admin status updated!");
             })
             .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
