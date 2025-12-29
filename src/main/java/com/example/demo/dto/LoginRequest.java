@@ -4,7 +4,6 @@ public class LoginRequest {
     private String email;
     private String password;
 
-    // Constructors
     public LoginRequest() {}
     
     public LoginRequest(String email, String password) {
@@ -12,7 +11,6 @@ public class LoginRequest {
         this.password = password;
     }
 
-    // Getters and Setters
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 

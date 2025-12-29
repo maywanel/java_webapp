@@ -19,7 +19,8 @@ update:
 	@$(MVN) install -DskipTests=$(SKIP_TESTS)
 
 run:
-	@if ls target/*.jar >/dev/null 2>&1; then \
+	@mysql-start; \
+	if ls target/*.jar >/dev/null 2>&1; then \
 	  echo "Running jar from target/"; \
 	  java -jar target/*.jar; \
 	else \

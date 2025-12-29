@@ -16,17 +16,44 @@ public class AdminInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
+        if (isPublicAuthRequest(request)) {
+            return true;
+        }
+
         HttpSession session = request.getSession(false);
+        boolean isApiRequest = request.getRequestURI().startsWith("/users/");
 
         if (session == null || session.getAttribute("currentUser") == null) {
-            logger.debug("No active session or no currentUser in session; redirecting to /login");
-            response.sendRedirect("/login");
+            logger.debug("No active session or no currentUser in session");
+            if (isApiRequest)
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
+            else
+                response.sendRedirect("/login");
             return false;
         }
         if (Boolean.TRUE.equals(session.getAttribute("isAdmin")))
             return true;
-        logger.debug("Authenticated user is not admin; redirecting to /error/403");
-        response.sendRedirect("/error/403");
+        logger.debug("Authenticated user is not admin");
+        if (isApiRequest)
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Admin access required");
+        else
+            response.sendRedirect("/error/403");
         return false;
+    }
+
+    private boolean isPublicAuthRequest(HttpServletRequest request) {
+        String contextPath = request.getContextPath();
+        String path = request.getRequestURI();
+        if (contextPath != null && !contextPath.isEmpty() && path.startsWith(contextPath))
+            path = path.substring(contextPath.length());
+        if (path.endsWith("/") && path.length() > 1)
+            path = path.substring(0, path.length() - 1);
+
+        String method = request.getMethod();
+        boolean isSignup = "/users".equals(path) && "POST".equalsIgnoreCase(method);
+        boolean isLogin = "/users/login".equals(path) && "POST".equalsIgnoreCase(method);
+        boolean isLogout = "/users/logout".equals(path);
+
+        return isSignup || isLogin || isLogout;
     }
 }

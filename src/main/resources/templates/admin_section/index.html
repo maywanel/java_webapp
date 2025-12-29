@@ -12,11 +12,26 @@
             margin: 0;
             padding: 0;
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #02030a;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow-x: hidden;
+        }
+
+        body > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        #space-bg {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
         }
         
         .container {
@@ -116,7 +131,7 @@
                 transform: translateY(0);
             }
         }
-        
+
         /* Hero Section Styles */
         .hero-section {
             background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
@@ -308,6 +323,7 @@
     </style>
 </head>
 <body>
+    <canvas id="space-bg" aria-hidden="true"></canvas>
     <div class="container">
         <h1 th:text="${message}">Default Welcome Message</h1>
         
@@ -385,7 +401,6 @@
     </div>
     
     <script>
-        // Check admin access on page load
         document.addEventListener('DOMContentLoaded', function() {
             checkAdminAccess();
             loadDashboardStats();
@@ -537,7 +552,7 @@
                     'Database Type': 'MySQL',
                     'Connection Status': '🟢 Connected',
                     'Total Records': users.length,
-                    'Tables': 'users, tokens',
+                    'Tables': 'users, book',
                     'Last Query': new Date().toLocaleString()
                 };
                 
@@ -655,5 +670,7 @@
             return div.innerHTML;
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
+    <script src="/js/space-bg.js"></script>
 </body>
 </html>
