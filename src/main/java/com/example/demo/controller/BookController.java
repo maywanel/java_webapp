@@ -4,14 +4,9 @@ import com.example.demo.service.BookService;
 import com.example.demo.model.Book;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/books")
@@ -22,13 +17,21 @@ public class BookController {
         this.bookService = bookService;
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<?> searchExternalBooks(@RequestParam String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Query cannot be empty");
+        }
+        
+        List<Book> results = bookService.searchBooksFromApi(query);
+        return ResponseEntity.ok(results);
+    }
+
     @PostMapping
     public ResponseEntity<?> addBook(@RequestBody Book book) {
         if (book.getTitle() == null || book.getTitle().trim().isEmpty() || 
             book.getAuthor() == null || book.getAuthor().trim().isEmpty() ||
-            book.getDescription() == null || book.getDescription().trim().isEmpty() || 
-            book.getPrice() <= 0 || book.getPrice() > 999999.99 ||
-            book.getStock() < 0 || book.getStock() > 999999) {
+            book.getDescription() == null || book.getDescription().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid book data");
         }
         if (book.getTitle().length() > 255 || book.getAuthor().length() > 255 || 
@@ -41,8 +44,8 @@ public class BookController {
         book.setTitle(book.getTitle().trim());
         book.setAuthor(book.getAuthor().trim());
         book.setDescription(book.getDescription().trim());
-        bookService.saveBook(book);
-        return ResponseEntity.ok("Book has been added");
+        Book savedBook = bookService.saveBook(book);
+        return ResponseEntity.ok(savedBook);
     }
 
     @GetMapping
@@ -54,9 +57,7 @@ public class BookController {
     public ResponseEntity<?> updateBook(@PathVariable Long id, @RequestBody Book book) {
         if (book.getTitle() == null || book.getTitle().trim().isEmpty() || 
             book.getAuthor() == null || book.getAuthor().trim().isEmpty() ||
-            book.getDescription() == null || book.getDescription().trim().isEmpty() || 
-            book.getPrice() <= 0 || book.getPrice() > 999999.99 ||
-            book.getStock() < 0 || book.getStock() > 999999) {
+                book.getDescription() == null || book.getDescription().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid book data");
         }
         if (book.getTitle().length() > 255 || book.getAuthor().length() > 255 || 

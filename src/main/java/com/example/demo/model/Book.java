@@ -14,10 +14,18 @@ public class Book {
     private String title;
     private String author;
     private String description;
-    private double price;
-    private int stock;
+    private String isbn;
+    private Long coverId;
 
     // Getters and Setters
+    public Long getCoverId() {
+        return coverId;
+    }
+
+    public void setCoverId(Long coverId) {
+        this.coverId = coverId;
+    }
+
     public Long getId() {
         return id;
     }
@@ -50,19 +58,11 @@ public class Book {
         this.description = description;
     }
 
-    public double getPrice() {
-        return price;
+    public String getIsbn() {
+        return isbn;
     }
 
-    public void setPrice(double price) {
-        this.price = price;
-    }
-
-    public int getStock() {
-        return stock;
-    }
-
-    public void setStock(int stock) {
-        this.stock = stock;
+    public void setIsbn(String isbn) {
+        this.isbn = isbn;
     }
 }
